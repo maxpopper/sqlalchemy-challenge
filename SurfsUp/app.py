@@ -116,9 +116,9 @@ def start_end(start=None, end=None):
     
 
     # Return a JSON list of the minimum temperature, the average temperature, and 
-    # the maximum temperature for a specified start or start-end range
+    # the maximum temperature for a specified start date
     if not end:
-
+        # query for date and all temperature measurements from specified start date
         results = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
             filter((measurement.date) >= start).\
             group_by(measurement.date).all()
@@ -138,8 +138,10 @@ def start_end(start=None, end=None):
 
         return jsonify(result_list)
 
+    # Return a JSON list of the minimum temperature, the average temperature, and 
+    # the maximum temperature for a specified start and end date range
     else:
-
+        # query for date and all temperature measurements from specified start/end range
         results = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
             filter((measurement.date) >= start).\
             filter((measurement.date) <= end).\
