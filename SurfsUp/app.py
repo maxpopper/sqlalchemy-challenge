@@ -79,14 +79,86 @@ def stations():
 
     session.close()
 
-    station_list = {"Station": results}
+    stations = list(np.ravel(results))
+
+    return jsonify(stations)
+
+
+@app.route("/api/v1.0/tobs")
+def tobs():
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    # Query the dates and temperature observations of the most-active station for the previous year of data
+    most_active = 'USC00519281'
+    results = session.query(measurement.date, measurement.tobs).\
+        filter(measurement.station == most_active).\
+        filter(measurement.date >= pd.to_datetime(session.query(func.max(measurement.date)).scalar()).date() - dt.timedelta(days=365))
     
-    # for station in results:
-    #     station_list.append(station)
+    session.close()
 
-    return jsonify(station_list)
+    tobs_list = []
+    for date, tobs, in results:
+        dict_ = {}
+        dict_["date"] = date
+        dict_["temp"] = tobs
+        tobs_list.append(dict_)
+
+    # Return a JSON list of temperature observations for the previous year
+    return jsonify(tobs_list)
 
 
+@app.route("/api/v1.0/<start>")
+@app.route("/api/v1.0/<start>/<end>")
+def start_end(start=None, end=None):
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+    
+
+    # Return a JSON list of the minimum temperature, the average temperature, and 
+    # the maximum temperature for a specified start or start-end range
+    if not end:
+
+        results = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
+            filter((measurement.date) >= start).\
+            group_by(measurement.date).all()
+
+        result_list = []
+        
+        for result in results:
+            date, min_temp, avg_temp, max_temp = result
+            temp_dict = {
+                "Date": date,
+                "Min": min_temp,
+                "Avg": avg_temp,
+                "Max": max_temp
+            }
+
+            result_list.append(temp_dict)
+
+        return jsonify(result_list)
+
+    else:
+
+        results = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs), func.max(measurement.tobs)).\
+            filter((measurement.date) >= start).\
+            filter((measurement.date) <= end).\
+            group_by(measurement.date).all()
+
+        result_list = []
+        
+        for result in results:
+            date, min_temp, avg_temp, max_temp = result
+            temp_dict = {
+                "Date": date,
+                "Min": min_temp,
+                "Avg": avg_temp,
+                "Max": max_temp
+            }
+
+            result_list.append(temp_dict)
+
+        return jsonify(result_list)
 
 
 if __name__ == '__main__':
